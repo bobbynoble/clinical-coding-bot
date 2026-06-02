@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinical Coding Bot</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+    header {
+      background: #1e40af; color: white; padding: 1rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header span { font-size: 0.8rem; opacity: 0.7; }
+
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+    .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 1.5rem; }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151; }
+
+    textarea {
+      width: 100%; height: 260px; padding: 0.75rem; border: 1px solid #d1d5db;
+      border-radius: 0.5rem; font-size: 0.9rem; resize: vertical; font-family: inherit;
+    }
+    textarea:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
+
+    .filters { margin-top: 1rem; }
+    .filters label { font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.5rem; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .checkbox-group label {
+      display: flex; align-items: center; gap: 0.35rem;
+      font-size: 0.8rem; background: #f3f4f6; padding: 0.3rem 0.6rem;
+      border-radius: 999px; cursor: pointer; border: 1px solid #e5e7eb;
+    }
+    .checkbox-group input[type=checkbox]:checked + span { color: #1e40af; font-weight: 600; }
+
+    button[type=submit] {
+      margin-top: 1rem; width: 100%; padding: 0.75rem;
+      background: #1e40af; color: white; border: none; border-radius: 0.5rem;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s;
+    }
+    button[type=submit]:hover { background: #1d3a9e; }
+    button[type=submit]:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    #results { min-height: 200px; }
+
+    .suggestion {
+      border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem;
+      margin-bottom: 0.75rem; position: relative;
+    }
+    .suggestion.high { border-left: 4px solid #16a34a; }
+    .suggestion.medium { border-left: 4px solid #d97706; }
+    .suggestion.low { border-left: 4px solid #dc2626; }
+
+    .code-badge {
+      display: inline-block; background: #1e40af; color: white;
+      padding: 0.15rem 0.5rem; border-radius: 0.3rem; font-size: 0.8rem;
+      font-weight: 700; margin-right: 0.5rem; font-family: monospace;
+    }
+    .system-badge {
+      font-size: 0.7rem; background: #f3f4f6; border: 1px solid #d1d5db;
+      padding: 0.1rem 0.4rem; border-radius: 0.3rem; color: #6b7280;
+    }
+    .desc { font-size: 0.9rem; font-weight: 600; margin-top: 0.4rem; }
+    .justification { font-size: 0.82rem; color: #4b5563; margin-top: 0.3rem; }
+    .review-flag {
+      margin-top: 0.4rem; font-size: 0.8rem; background: #fef3c7;
+      border: 1px solid #fcd34d; padding: 0.25rem 0.5rem; border-radius: 0.3rem; color: #92400e;
+    }
+    .confidence { position: absolute; top: 0.75rem; right: 0.75rem; font-size: 0.72rem; color: #9ca3af; }
+
+    .coding-notes {
+      margin-top: 1rem; padding: 0.75rem; background: #f0fdf4;
+      border: 1px solid #bbf7d0; border-radius: 0.5rem; font-size: 0.85rem; color: #166534;
+    }
+
+    .placeholder { color: #9ca3af; font-size: 0.9rem; text-align: center; margin-top: 4rem; }
+    .spinner { display: none; text-align: center; margin-top: 3rem; color: #6b7280; }
+    .error-msg { color: #dc2626; font-size: 0.9rem; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clinical Coding Bot</h1>
+    <span>Powered by Azure OpenAI + AI Search</span>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Clinical Note</h2>
+      <form id="codingForm">
+        <textarea id="noteInput" name="note" placeholder="Paste discharge summary, clinic letter, or clinical note here..."></textarea>
+
+        <div class="filters">
+          <label>Code systems to include</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" value="ICD-10-CM" checked /><span>ICD-10-CM</span></label>
+            <label><input type="checkbox" value="OPCS-4" checked /><span>OPCS-4</span></label>
+            <label><input type="checkbox" value="HCC" checked /><span>HCC</span></label>
+            <label><input type="checkbox" value="SNOMED CT" /><span>SNOMED CT</span></label>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn">Suggest Codes</button>
+      </form>
+    </div>
+
+    <div class="card" id="resultsCard">
+      <h2>Suggested Codes</h2>
+      <div class="spinner" id="spinner">Analysing clinical note...</div>
+      <div id="results">
+        <p class="placeholder">Paste a clinical note and click "Suggest Codes" to begin.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('codingForm');
+    const results = document.getElementById('results');
+    const spinner = document.getElementById('spinner');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const note = document.getElementById('noteInput').value.trim();
+      if (!note) return;
+
+      const checked = [...document.querySelectorAll('.checkbox-group input:checked')].map(i => i.value);
+      const systems = checked.join(',');
+
+      results.innerHTML = '';
+      spinner.style.display = 'block';
+      submitBtn.disabled = true;
+
+      try {
+        const fd = new FormData();
+        fd.append('note', note);
+        fd.append('systems', systems);
+
+        const res = await fetch('/api/suggest', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        spinner.style.display = 'none';
+        submitBtn.disabled = false;
+
+        if (data.error) {
+          results.innerHTML = `<p class="error-msg">Error: ${data.error}</p>`;
+          return;
+        }
+
+        if (!data.suggestions || data.suggestions.length === 0) {
+          results.innerHTML = '<p class="placeholder">No codes suggested.</p>';
+          return;
+        }
+
+        let html = '';
+        for (const s of data.suggestions) {
+          html += `
+            <div class="suggestion ${s.confidence}">
+              <span class="confidence">${s.confidence} confidence</span>
+              <span class="code-badge">${s.code}</span>
+              <span class="system-badge">${s.system}</span>
+              <div class="desc">${s.description}</div>
+              <div class="justification">${s.justification}</div>
+              ${s.review_flag ? `<div class="review-flag">&#9888; REVIEW: ${s.review_flag}</div>` : ''}
+            </div>`;
+        }
+
+        if (data.coding_notes) {
+          html += `<div class="coding-notes"><strong>Coding notes:</strong> ${data.coding_notes}</div>`;
+        }
+
+        results.innerHTML = html;
+      } catch (err) {
+        spinner.style.display = 'none';
+        submitBtn.disabled = false;
+        results.innerHTML = `<p class="error-msg">Request failed: ${err.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

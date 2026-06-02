@@ -1,0 +1,23 @@
+# Secrets - never commit
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+
+# Data files (large, download separately)
+data/icd10.csv
+data/opcs4.csv
+data/hcc.csv
+data/codes.csv
+
+# PowerPoint temp files
+~$*.pptx
+
+# IDE
+.claude/settings.local.json
