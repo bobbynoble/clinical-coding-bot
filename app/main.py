@@ -8,6 +8,7 @@ from app.coder import suggest_codes
 
 app = FastAPI(title="Clinical Coding Bot")
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "templates")), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
