@@ -6,180 +6,607 @@
   <title>Clinical Coding Bot</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
 
+    :root {
+      --blue:       #1e40af;
+      --blue-light: #eff6ff;
+      --blue-mid:   #bfdbfe;
+      --green:      #16a34a;
+      --green-light:#f0fdf4;
+      --amber:      #d97706;
+      --amber-light:#fffbeb;
+      --red:        #dc2626;
+      --red-light:  #fef2f2;
+      --grey-100:   #f3f4f6;
+      --grey-200:   #e5e7eb;
+      --grey-400:   #9ca3af;
+      --grey-600:   #4b5563;
+      --grey-700:   #374151;
+      --grey-900:   #111827;
+      --radius:     0.5rem;
+      --shadow:     0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md:  0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f4f8; color: var(--grey-900);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* ── Header ── */
     header {
-      background: #1e40af; color: white; padding: 1rem 2rem;
+      background: var(--blue); color: white;
+      padding: 0.75rem 2rem;
       display: flex; align-items: center; gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
     }
-    header h1 { font-size: 1.25rem; font-weight: 600; }
-    header span { font-size: 0.8rem; opacity: 0.7; }
+    .header-logo { background: white; border-radius: 8px; padding: 4px 8px; display: flex; align-items: center; flex-shrink: 0; }
+    .header-logo img { height: 36px; width: auto; }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header .tagline { font-size: 0.78rem; opacity: 0.7; margin-left: auto; }
+    .header-stats { display: flex; gap: 1.5rem; margin-left: auto; }
+    .stat-pill {
+      background: rgba(255,255,255,0.15); border-radius: 999px;
+      padding: 0.25rem 0.75rem; font-size: 0.78rem; font-weight: 600;
+    }
 
-    main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    /* ── Layout ── */
+    .workspace {
+      flex: 1; display: grid;
+      grid-template-columns: 380px 1fr 300px;
+      grid-template-rows: 1fr;
+      gap: 0; max-width: 1400px; width: 100%;
+      margin: 0 auto; padding: 1.5rem; gap: 1.25rem;
+    }
 
-    .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 1.5rem; }
-    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151; }
+    /* ── Panels ── */
+    .panel {
+      background: white; border-radius: var(--radius);
+      box-shadow: var(--shadow); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--grey-200);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-header h2 { font-size: 0.9rem; font-weight: 700; color: var(--grey-700); display: flex; align-items: center; gap: 0.4rem; }
+    .panel-header .badge-count {
+      background: var(--blue); color: white; font-size: 0.7rem;
+      font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 999px;
+    }
+    .panel-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
 
+    /* ── Input Panel ── */
     textarea {
-      width: 100%; height: 260px; padding: 0.75rem; border: 1px solid #d1d5db;
-      border-radius: 0.5rem; font-size: 0.9rem; resize: vertical; font-family: inherit;
+      width: 100%; height: 220px; padding: 0.75rem;
+      border: 1.5px solid var(--grey-200); border-radius: var(--radius);
+      font-size: 0.88rem; resize: vertical; font-family: inherit;
+      line-height: 1.6; color: var(--grey-900);
+      transition: border-color .15s, box-shadow .15s;
     }
-    textarea:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
+    textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-mid); }
+    .char-count { text-align: right; font-size: 0.75rem; color: var(--grey-400); margin-top: 0.35rem; }
 
-    .filters { margin-top: 1rem; }
-    .filters label { font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.5rem; }
-    .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .checkbox-group label {
-      display: flex; align-items: center; gap: 0.35rem;
-      font-size: 0.8rem; background: #f3f4f6; padding: 0.3rem 0.6rem;
-      border-radius: 999px; cursor: pointer; border: 1px solid #e5e7eb;
+    .section-label { font-size: 0.78rem; font-weight: 600; color: var(--grey-600); margin: 1rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .sys-chip {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.78rem; padding: 0.3rem 0.65rem;
+      border-radius: 999px; cursor: pointer;
+      border: 1.5px solid var(--grey-200); background: var(--grey-100);
+      transition: all .15s; user-select: none;
     }
-    .checkbox-group input[type=checkbox]:checked + span { color: #1e40af; font-weight: 600; }
+    .sys-chip input { display: none; }
+    .sys-chip.icd10  { border-color: #93c5fd; }
+    .sys-chip.opcs4  { border-color: #6ee7b7; }
+    .sys-chip.hcc    { border-color: #fcd34d; }
+    .sys-chip.snomed { border-color: #c4b5fd; }
+    .sys-chip.checked.icd10  { background: #eff6ff; color: var(--blue); font-weight: 700; border-color: var(--blue); }
+    .sys-chip.checked.opcs4  { background: #f0fdf4; color: #065f46; font-weight: 700; border-color: #059669; }
+    .sys-chip.checked.hcc    { background: #fffbeb; color: #92400e; font-weight: 700; border-color: var(--amber); }
+    .sys-chip.checked.snomed { background: #f5f3ff; color: #4c1d95; font-weight: 700; border-color: #7c3aed; }
 
-    button[type=submit] {
-      margin-top: 1rem; width: 100%; padding: 0.75rem;
-      background: #1e40af; color: white; border: none; border-radius: 0.5rem;
-      font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s;
+    .submit-btn {
+      margin-top: 1.25rem; width: 100%; padding: 0.8rem;
+      background: var(--blue); color: white; border: none;
+      border-radius: var(--radius); font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; transition: background .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
     }
-    button[type=submit]:hover { background: #1d3a9e; }
-    button[type=submit]:disabled { background: #93c5fd; cursor: not-allowed; }
+    .submit-btn:hover:not(:disabled) { background: #1d3a9e; }
+    .submit-btn:active { transform: scale(0.99); }
+    .submit-btn:disabled { background: var(--blue-mid); cursor: not-allowed; }
 
-    #results { min-height: 200px; }
+    /* ── History ── */
+    .history-item {
+      padding: 0.6rem 0.75rem; border-radius: 0.4rem;
+      background: var(--grey-100); font-size: 0.8rem; color: var(--grey-600);
+      cursor: pointer; margin-bottom: 0.4rem;
+      border: 1px solid transparent; transition: all .15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .history-item:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+    .history-empty { font-size: 0.82rem; color: var(--grey-400); text-align: center; padding: 1rem 0; }
+
+    /* ── Suggestions Panel ── */
+    .spinner-wrap { text-align: center; padding: 3rem 1rem; color: var(--grey-400); }
+    .spin-icon { font-size: 2rem; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .placeholder-msg { text-align: center; padding: 3rem 1rem; color: var(--grey-400); }
+    .placeholder-msg .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .placeholder-msg p { font-size: 0.88rem; }
 
     .suggestion {
-      border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem;
-      margin-bottom: 0.75rem; position: relative;
+      border: 1.5px solid var(--grey-200); border-radius: var(--radius);
+      margin-bottom: 0.75rem; overflow: hidden;
+      transition: box-shadow .15s;
     }
-    .suggestion.high { border-left: 4px solid #16a34a; }
-    .suggestion.medium { border-left: 4px solid #d97706; }
-    .suggestion.low { border-left: 4px solid #dc2626; }
+    .suggestion:hover { box-shadow: var(--shadow-md); }
+    .suggestion.accepted { border-color: var(--green); background: var(--green-light); opacity: 0.7; }
+    .suggestion.rejected { opacity: 0.35; }
 
+    .sug-top {
+      padding: 0.75rem 1rem 0.6rem;
+      display: flex; align-items: flex-start; gap: 0.5rem;
+    }
+    .sug-main { flex: 1; min-width: 0; }
+
+    .sug-badges { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
     .code-badge {
-      display: inline-block; background: #1e40af; color: white;
-      padding: 0.15rem 0.5rem; border-radius: 0.3rem; font-size: 0.8rem;
-      font-weight: 700; margin-right: 0.5rem; font-family: monospace;
+      font-family: monospace; font-size: 0.85rem; font-weight: 800;
+      padding: 0.15rem 0.5rem; border-radius: 0.3rem;
+      background: var(--blue); color: white;
     }
-    .system-badge {
-      font-size: 0.7rem; background: #f3f4f6; border: 1px solid #d1d5db;
-      padding: 0.1rem 0.4rem; border-radius: 0.3rem; color: #6b7280;
+    .sys-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.45rem;
+      border-radius: 0.3rem; border: 1px solid;
     }
-    .desc { font-size: 0.9rem; font-weight: 600; margin-top: 0.4rem; }
-    .justification { font-size: 0.82rem; color: #4b5563; margin-top: 0.3rem; }
+    .sys-badge.icd10  { background: #eff6ff; color: var(--blue);   border-color: #93c5fd; }
+    .sys-badge.opcs4  { background: #f0fdf4; color: #065f46;        border-color: #6ee7b7; }
+    .sys-badge.hcc    { background: #fffbeb; color: #92400e;        border-color: #fcd34d; }
+    .sys-badge.snomed { background: #f5f3ff; color: #4c1d95;        border-color: #c4b5fd; }
+
+    .conf-bar-wrap { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+    .conf-bar-track { flex: 1; height: 5px; background: var(--grey-200); border-radius: 999px; overflow: hidden; }
+    .conf-bar-fill { height: 100%; border-radius: 999px; }
+    .conf-bar-fill.high   { width: 100%; background: var(--green); }
+    .conf-bar-fill.medium { width: 60%;  background: var(--amber); }
+    .conf-bar-fill.low    { width: 30%;  background: var(--red); }
+    .conf-label { font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+    .conf-label.high   { color: var(--green); }
+    .conf-label.medium { color: var(--amber); }
+    .conf-label.low    { color: var(--red); }
+
+    .sug-desc { font-size: 0.88rem; font-weight: 600; color: var(--grey-900); margin-bottom: 0.2rem; }
+
+    .sug-toggle {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.75rem; color: var(--grey-400); padding: 0.15rem 0.3rem;
+      border-radius: 0.25rem; flex-shrink: 0; margin-top: 0.15rem;
+      transition: color .15s;
+    }
+    .sug-toggle:hover { color: var(--blue); }
+
+    .sug-detail { padding: 0 1rem 0.75rem; display: none; }
+    .sug-detail.open { display: block; }
+    .sug-justification { font-size: 0.82rem; color: var(--grey-600); line-height: 1.5; margin-bottom: 0.5rem; }
     .review-flag {
-      margin-top: 0.4rem; font-size: 0.8rem; background: #fef3c7;
-      border: 1px solid #fcd34d; padding: 0.25rem 0.5rem; border-radius: 0.3rem; color: #92400e;
-    }
-    .confidence { position: absolute; top: 0.75rem; right: 0.75rem; font-size: 0.72rem; color: #9ca3af; }
-
-    .coding-notes {
-      margin-top: 1rem; padding: 0.75rem; background: #f0fdf4;
-      border: 1px solid #bbf7d0; border-radius: 0.5rem; font-size: 0.85rem; color: #166534;
+      font-size: 0.78rem; background: var(--amber-light);
+      border: 1px solid #fcd34d; padding: 0.3rem 0.6rem;
+      border-radius: 0.3rem; color: #92400e; margin-bottom: 0.5rem;
     }
 
-    .placeholder { color: #9ca3af; font-size: 0.9rem; text-align: center; margin-top: 4rem; }
-    .spinner { display: none; text-align: center; margin-top: 3rem; color: #6b7280; }
-    .error-msg { color: #dc2626; font-size: 0.9rem; padding: 1rem; }
+    .sug-actions { display: flex; gap: 0.5rem; padding: 0 1rem 0.75rem; }
+    .btn-accept, .btn-reject, .btn-copy {
+      padding: 0.35rem 0.75rem; border-radius: 0.35rem;
+      font-size: 0.78rem; font-weight: 700; cursor: pointer;
+      border: 1.5px solid; transition: all .15s;
+    }
+    .btn-accept { background: var(--green-light); color: var(--green); border-color: var(--green); }
+    .btn-accept:hover { background: var(--green); color: white; }
+    .btn-reject { background: var(--red-light); color: var(--red); border-color: var(--red); }
+    .btn-reject:hover { background: var(--red); color: white; }
+    .btn-copy   { background: var(--grey-100); color: var(--grey-600); border-color: var(--grey-200); }
+    .btn-copy:hover { background: var(--grey-200); }
+
+    .coding-notes-box {
+      padding: 0.75rem 1rem; background: var(--green-light);
+      border: 1px solid #bbf7d0; border-radius: var(--radius);
+      font-size: 0.82rem; color: #166534; margin-bottom: 0.75rem;
+    }
+    .error-msg { color: var(--red); font-size: 0.88rem; padding: 1rem; }
+
+    /* ── Confirmed Codes Panel ── */
+    .confirmed-empty { font-size: 0.82rem; color: var(--grey-400); text-align: center; padding: 2rem 0; }
+    .confirmed-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.75rem; border-radius: 0.4rem;
+      background: var(--green-light); border: 1.5px solid #bbf7d0;
+      margin-bottom: 0.5rem;
+    }
+    .confirmed-item .ci-code { font-family: monospace; font-weight: 800; font-size: 0.88rem; color: var(--blue); }
+    .confirmed-item .ci-desc { font-size: 0.78rem; color: var(--grey-600); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .confirmed-item .ci-remove { background: none; border: none; cursor: pointer; color: var(--grey-400); font-size: 1rem; padding: 0 0.2rem; flex-shrink: 0; }
+    .confirmed-item .ci-remove:hover { color: var(--red); }
+
+    .export-btn {
+      width: 100%; padding: 0.7rem; margin-top: 1rem;
+      background: var(--blue); color: white; border: none;
+      border-radius: var(--radius); font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .export-btn:hover { background: #1d3a9e; }
+    .export-btn:disabled { background: var(--blue-mid); cursor: not-allowed; }
+
+    .clear-btn {
+      width: 100%; padding: 0.55rem; margin-top: 0.5rem;
+      background: none; color: var(--grey-400); border: 1.5px solid var(--grey-200);
+      border-radius: var(--radius); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+    }
+    .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Code Search ── */
+    .search-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .search-row input {
+      flex: 1; padding: 0.5rem 0.7rem; border: 1.5px solid var(--grey-200);
+      border-radius: var(--radius); font-size: 0.85rem; font-family: inherit;
+    }
+    .search-row input:focus { outline: none; border-color: var(--blue); }
+    .search-row button {
+      padding: 0.5rem 0.9rem; background: var(--blue); color: white;
+      border: none; border-radius: var(--radius); font-size: 0.82rem;
+      font-weight: 700; cursor: pointer;
+    }
+
+    footer {
+      text-align: center; padding: 1rem;
+      font-size: 0.75rem; color: var(--grey-400);
+      border-top: 1px solid var(--grey-200);
+    }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+      .header-stats { display: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <span style="background:white;border-radius:8px;padding:4px 8px;display:flex;align-items:center;flex-shrink:0;"><img src="/static/nlpss-logo.png" alt="NLPSS" style="height:36px;width:auto;" /></span>
-    <h1>Clinical Coding Bot</h1>
-    <span>Powered by Azure OpenAI + AI Search</span>
-  </header>
 
-  <main>
-    <div class="card">
-      <h2>Clinical Note</h2>
+<header>
+  <span class="header-logo"><img src="/static/nlpss-logo.png" alt="NLPSS" /></span>
+  <h1>Clinical Coding Bot</h1>
+  <div class="header-stats">
+    <span class="stat-pill" id="stat-suggested">0 suggested</span>
+    <span class="stat-pill" id="stat-accepted">0 accepted</span>
+  </div>
+  <span class="tagline">Powered by Azure OpenAI + AI Search</span>
+</header>
+
+<div class="workspace">
+
+  <!-- ── Left: Input ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>📄 Clinical Note</h2>
+    </div>
+    <div class="panel-body">
       <form id="codingForm">
-        <textarea id="noteInput" name="note" placeholder="Paste discharge summary, clinic letter, or clinical note here..."></textarea>
+        <textarea id="noteInput" name="note" placeholder="Paste discharge summary, clinic letter, or clinical note here…" oninput="updateCharCount()"></textarea>
+        <div class="char-count"><span id="charCount">0</span> characters</div>
 
-        <div class="filters">
-          <label>Code systems to include</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" value="ICD-10-CM" checked /><span>ICD-10-CM</span></label>
-            <label><input type="checkbox" value="OPCS-4" checked /><span>OPCS-4</span></label>
-            <label><input type="checkbox" value="HCC" checked /><span>HCC</span></label>
-            <label><input type="checkbox" value="SNOMED CT" /><span>SNOMED CT</span></label>
-          </div>
+        <div class="section-label">Code systems</div>
+        <div class="checkbox-group">
+          <label class="sys-chip icd10 checked"><input type="checkbox" value="ICD-10-CM" checked onchange="toggleChip(this)" /><span>ICD-10-CM</span></label>
+          <label class="sys-chip opcs4 checked"><input type="checkbox" value="OPCS-4" checked onchange="toggleChip(this)" /><span>OPCS-4</span></label>
+          <label class="sys-chip hcc checked"><input type="checkbox" value="HCC" checked onchange="toggleChip(this)" /><span>HCC</span></label>
+          <label class="sys-chip snomed"><input type="checkbox" value="SNOMED CT" onchange="toggleChip(this)" /><span>SNOMED CT</span></label>
         </div>
 
-        <button type="submit" id="submitBtn">Suggest Codes</button>
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span id="submitIcon">🔍</span>
+          <span id="submitText">Suggest Codes</span>
+        </button>
       </form>
-    </div>
 
-    <div class="card" id="resultsCard">
-      <h2>Suggested Codes</h2>
-      <div class="spinner" id="spinner">Analysing clinical note...</div>
-      <div id="results">
-        <p class="placeholder">Paste a clinical note and click "Suggest Codes" to begin.</p>
+      <div class="section-label" style="margin-top:1.5rem;">Recent notes</div>
+      <div id="historyList"><p class="history-empty">No history yet</p></div>
+    </div>
+  </div>
+
+  <!-- ── Middle: Suggestions ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>💡 Suggested Codes <span class="badge-count" id="sugCount" style="display:none">0</span></h2>
+      <span style="font-size:0.75rem;color:var(--grey-400);">Accept or reject each code</span>
+    </div>
+    <div class="panel-body" id="resultsPanel">
+      <div class="placeholder-msg">
+        <div class="icon">🏥</div>
+        <p>Paste a clinical note and click<br><strong>Suggest Codes</strong> to begin.</p>
       </div>
     </div>
-  </main>
+  </div>
 
-  <script>
-    const form = document.getElementById('codingForm');
-    const results = document.getElementById('results');
-    const spinner = document.getElementById('spinner');
-    const submitBtn = document.getElementById('submitBtn');
+  <!-- ── Right: Confirmed ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>✅ Confirmed Codes <span class="badge-count" id="confCount" style="display:none">0</span></h2>
+    </div>
+    <div class="panel-body">
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const note = document.getElementById('noteInput').value.trim();
-      if (!note) return;
+      <div class="section-label">Search &amp; add manually</div>
+      <div class="search-row">
+        <input type="text" id="manualSearch" placeholder="e.g. I21.9 or STEMI" onkeydown="if(event.key==='Enter')manualAdd()" />
+        <button onclick="manualAdd()">Add</button>
+      </div>
 
-      const checked = [...document.querySelectorAll('.checkbox-group input:checked')].map(i => i.value);
-      const systems = checked.join(',');
+      <div class="section-label">Accepted codes</div>
+      <div id="confirmedList"><p class="confirmed-empty">No codes confirmed yet.<br>Accept suggestions to build your list.</p></div>
 
-      results.innerHTML = '';
-      spinner.style.display = 'block';
-      submitBtn.disabled = true;
+      <button class="export-btn" id="exportBtn" onclick="exportCSV()" disabled>⬇ Export to CSV</button>
+      <button class="clear-btn" id="clearBtn" onclick="clearConfirmed()" disabled>Clear all</button>
+    </div>
+  </div>
 
-      try {
-        const fd = new FormData();
-        fd.append('note', note);
-        fd.append('systems', systems);
+</div>
 
-        const res = await fetch('/api/suggest', { method: 'POST', body: fd });
-        const data = await res.json();
+<footer>Clinical Coding Bot — for decision support only. Always verify codes against official guidelines.</footer>
 
-        spinner.style.display = 'none';
-        submitBtn.disabled = false;
+<script>
+  // ── State ────────────────────────────────────────────────────────────────
+  let confirmed = [];   // { code, system, description }
+  let history   = JSON.parse(localStorage.getItem('ccb_history') || '[]');
+  let lastSuggestions = [];
 
-        if (data.error) {
-          results.innerHTML = `<p class="error-msg">Error: ${data.error}</p>`;
-          return;
-        }
+  // ── Init ─────────────────────────────────────────────────────────────────
+  renderHistory();
 
-        if (!data.suggestions || data.suggestions.length === 0) {
-          results.innerHTML = '<p class="placeholder">No codes suggested.</p>';
-          return;
-        }
+  // ── Char count ───────────────────────────────────────────────────────────
+  function updateCharCount() {
+    document.getElementById('charCount').textContent =
+      document.getElementById('noteInput').value.length.toLocaleString();
+  }
 
-        let html = '';
-        for (const s of data.suggestions) {
-          html += `
-            <div class="suggestion ${s.confidence}">
-              <span class="confidence">${s.confidence} confidence</span>
-              <span class="code-badge">${s.code}</span>
-              <span class="system-badge">${s.system}</span>
-              <div class="desc">${s.description}</div>
-              <div class="justification">${s.justification}</div>
-              ${s.review_flag ? `<div class="review-flag">&#9888; REVIEW: ${s.review_flag}</div>` : ''}
-            </div>`;
-        }
+  // ── Chip toggle ──────────────────────────────────────────────────────────
+  function toggleChip(cb) {
+    cb.closest('.sys-chip').classList.toggle('checked', cb.checked);
+  }
 
-        if (data.coding_notes) {
-          html += `<div class="coding-notes"><strong>Coding notes:</strong> ${data.coding_notes}</div>`;
-        }
+  // ── System badge class ───────────────────────────────────────────────────
+  function sysCls(system) {
+    if (system.includes('ICD')) return 'icd10';
+    if (system.includes('OPCS')) return 'opcs4';
+    if (system.includes('HCC')) return 'hcc';
+    return 'snomed';
+  }
 
-        results.innerHTML = html;
-      } catch (err) {
-        spinner.style.display = 'none';
-        submitBtn.disabled = false;
-        results.innerHTML = `<p class="error-msg">Request failed: ${err.message}</p>`;
+  // ── Form submit ──────────────────────────────────────────────────────────
+  document.getElementById('codingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const note = document.getElementById('noteInput').value.trim();
+    if (!note) return;
+
+    const checked = [...document.querySelectorAll('.checkbox-group input:checked')].map(i => i.value);
+    const systems = checked.join(',');
+
+    const panel = document.getElementById('resultsPanel');
+    panel.innerHTML = `<div class="spinner-wrap"><div class="spin-icon">⚙️</div><p style="margin-top:0.75rem;font-size:0.88rem;">Analysing clinical note…</p></div>`;
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitIcon').textContent = '⏳';
+    document.getElementById('submitText').textContent = 'Analysing…';
+    document.getElementById('sugCount').style.display = 'none';
+
+    try {
+      const fd = new FormData();
+      fd.append('note', note);
+      fd.append('systems', systems);
+
+      const res  = await fetch('/api/suggest', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.error) {
+        panel.innerHTML = `<p class="error-msg">Error: ${escHtml(data.error)}</p>`;
+        return;
       }
+
+      lastSuggestions = data.suggestions || [];
+      renderSuggestions(data);
+      saveHistory(note);
+      updateStats();
+
+    } catch (err) {
+      panel.innerHTML = `<p class="error-msg">Request failed: ${escHtml(err.message)}</p>`;
+    } finally {
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitIcon').textContent = '🔍';
+      document.getElementById('submitText').textContent = 'Suggest Codes';
+    }
+  });
+
+  // ── Render suggestions ───────────────────────────────────────────────────
+  function renderSuggestions(data) {
+    const panel = document.getElementById('resultsPanel');
+
+    if (!data.suggestions || data.suggestions.length === 0) {
+      panel.innerHTML = `<div class="placeholder-msg"><div class="icon">🤔</div><p>No codes suggested for this note.</p></div>`;
+      return;
+    }
+
+    const count = document.getElementById('sugCount');
+    count.textContent = data.suggestions.length;
+    count.style.display = 'inline';
+
+    let html = '';
+    if (data.coding_notes) {
+      html += `<div class="coding-notes-box">💡 <strong>Coding notes:</strong> ${escHtml(data.coding_notes)}</div>`;
+    }
+
+    data.suggestions.forEach((s, i) => {
+      const cls = sysCls(s.system);
+      const alreadyAccepted = confirmed.some(c => c.code === s.code);
+      html += `
+        <div class="suggestion ${alreadyAccepted ? 'accepted' : ''}" id="sug-${i}">
+          <div class="sug-top">
+            <div class="sug-main">
+              <div class="sug-badges">
+                <span class="code-badge">${escHtml(s.code)}</span>
+                <span class="sys-badge ${cls}">${escHtml(s.system)}</span>
+              </div>
+              <div class="conf-bar-wrap">
+                <div class="conf-bar-track"><div class="conf-bar-fill ${s.confidence}"></div></div>
+                <span class="conf-label ${s.confidence}">${s.confidence}</span>
+              </div>
+              <div class="sug-desc">${escHtml(s.description)}</div>
+            </div>
+            <button class="sug-toggle" onclick="toggleDetail(${i})" title="Show detail">▼</button>
+          </div>
+          <div class="sug-detail" id="detail-${i}">
+            <div class="sug-justification">${escHtml(s.justification)}</div>
+            ${s.review_flag ? `<div class="review-flag">⚠️ REVIEW: ${escHtml(s.review_flag)}</div>` : ''}
+          </div>
+          <div class="sug-actions">
+            <button class="btn-accept" onclick="acceptCode(${i})" ${alreadyAccepted ? 'disabled' : ''}>✓ Accept</button>
+            <button class="btn-reject" onclick="rejectCode(${i})">✗ Reject</button>
+            <button class="btn-copy"   onclick="copyCode('${escHtml(s.code)}', this)">📋 Copy</button>
+          </div>
+        </div>`;
     });
-  </script>
+
+    panel.innerHTML = html;
+  }
+
+  // ── Toggle detail ────────────────────────────────────────────────────────
+  function toggleDetail(i) {
+    const d = document.getElementById('detail-' + i);
+    const btn = d.previousElementSibling.querySelector('.sug-toggle');
+    d.classList.toggle('open');
+    btn.textContent = d.classList.contains('open') ? '▲' : '▼';
+  }
+
+  // ── Accept / Reject ──────────────────────────────────────────────────────
+  function acceptCode(i) {
+    const s = lastSuggestions[i];
+    if (!s || confirmed.some(c => c.code === s.code)) return;
+    confirmed.push({ code: s.code, system: s.system, description: s.description });
+    document.getElementById('sug-' + i).classList.add('accepted');
+    document.querySelector(`#sug-${i} .btn-accept`).disabled = true;
+    renderConfirmed();
+    updateStats();
+  }
+
+  function rejectCode(i) {
+    document.getElementById('sug-' + i).classList.add('rejected');
+  }
+
+  // ── Copy code ────────────────────────────────────────────────────────────
+  function copyCode(code, btn) {
+    navigator.clipboard.writeText(code).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  // ── Manual add ───────────────────────────────────────────────────────────
+  function manualAdd() {
+    const val = document.getElementById('manualSearch').value.trim();
+    if (!val) return;
+    if (confirmed.some(c => c.code.toLowerCase() === val.toLowerCase())) return;
+    confirmed.push({ code: val.toUpperCase(), system: 'Manual', description: 'Manually added' });
+    document.getElementById('manualSearch').value = '';
+    renderConfirmed();
+    updateStats();
+  }
+
+  // ── Render confirmed ─────────────────────────────────────────────────────
+  function renderConfirmed() {
+    const list = document.getElementById('confirmedList');
+    const count = document.getElementById('confCount');
+
+    if (!confirmed.length) {
+      list.innerHTML = '<p class="confirmed-empty">No codes confirmed yet.<br>Accept suggestions to build your list.</p>';
+      count.style.display = 'none';
+      document.getElementById('exportBtn').disabled = true;
+      document.getElementById('clearBtn').disabled  = true;
+      return;
+    }
+
+    count.textContent = confirmed.length;
+    count.style.display = 'inline';
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('clearBtn').disabled  = false;
+
+    list.innerHTML = confirmed.map((c, i) => `
+      <div class="confirmed-item">
+        <span class="ci-code">${escHtml(c.code)}</span>
+        <span class="ci-desc" title="${escHtml(c.description)}">${escHtml(c.description)}</span>
+        <button class="ci-remove" onclick="removeConfirmed(${i})" title="Remove">✕</button>
+      </div>`).join('');
+  }
+
+  function removeConfirmed(i) {
+    confirmed.splice(i, 1);
+    renderConfirmed();
+    updateStats();
+    // Re-render suggestions to unblock accept buttons
+    if (lastSuggestions.length) renderSuggestions({ suggestions: lastSuggestions });
+  }
+
+  function clearConfirmed() {
+    confirmed = [];
+    renderConfirmed();
+    updateStats();
+    if (lastSuggestions.length) renderSuggestions({ suggestions: lastSuggestions });
+  }
+
+  // ── Export CSV ───────────────────────────────────────────────────────────
+  function exportCSV() {
+    if (!confirmed.length) return;
+    const rows = ['Code,System,Description', ...confirmed.map(c => `"${c.code}","${c.system}","${c.description.replace(/"/g,'""')}"`]];
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `codes-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────────
+  function updateStats() {
+    document.getElementById('stat-suggested').textContent = `${lastSuggestions.length} suggested`;
+    document.getElementById('stat-accepted').textContent  = `${confirmed.length} accepted`;
+  }
+
+  // ── History ──────────────────────────────────────────────────────────────
+  function saveHistory(note) {
+    const snippet = note.slice(0, 80).replace(/\n/g, ' ');
+    history = [snippet, ...history.filter(h => h !== snippet)].slice(0, 5);
+    localStorage.setItem('ccb_history', JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!history.length) { list.innerHTML = '<p class="history-empty">No history yet</p>'; return; }
+    list.innerHTML = history.map(h => `
+      <div class="history-item" onclick="loadHistory(this)" title="${escHtml(h)}">${escHtml(h)}</div>`).join('');
+  }
+
+  function loadHistory(el) {
+    document.getElementById('noteInput').value = el.title;
+    updateCharCount();
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
 </body>
 </html>
